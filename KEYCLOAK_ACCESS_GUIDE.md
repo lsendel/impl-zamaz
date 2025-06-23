@@ -265,4 +265,4 @@ else
 fi
 ```
 
-Save this as `test-keycloak.sh` and run it to verify Keycloak is working properly!
+Run this script to verify Keycloak is working properly! Alternatively, use `make test-ports` to test all service connectivity.

@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    container_name: impl-zamaz-app
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      - KEYCLOAK_BASE_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-zerotrust-test}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-zerotrust-client}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-zerotrust-secret-12345}
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_password}@postgres:5432/${POSTGRES_DB:-postgres}
+    env_file:
+      - .env
+    depends_on:
+      - keycloak
+      - redis
+      - postgres
+    restart: unless-stopped
+    networks:
+      - zerotrust-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.5
+    container_name: impl-zamaz-keycloak
+    command: start-dev --import-realm
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak_password
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+    ports:
+      - "${KEYCLOAK_PORT:-8082}:8080"
+    volumes:
+      - ./keycloak/imports:/opt/keycloak/data/import
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - zerotrust-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: impl-zamaz-postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - zerotrust-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: impl-zamaz-redis
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - zerotrust-network
+
+volumes:
+  postgres_data:
+
+networks:
+  zerotrust-network:
+    driver: bridge

@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.5
+    container_name: impl-zamaz-keycloak
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HTTP_PORT=8080
+    ports:
+      - "8082:8080"
+    restart: unless-stopped
+    networks:
+      - zerotrust-network
+    # Remove database dependency for dev mode
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: impl-zamaz-postgres
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+    networks:
+      - zerotrust-network
